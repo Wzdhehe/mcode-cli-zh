@@ -3,7 +3,7 @@
   "name": "mcode-cli-zh",
   "displayName": "mcode CLI 汉化",
   "version": "0.4.0",
-  "description": "自带 i18n-shim + 3 个内置字典包,装上 Plugin 时自动安装到 mcode CLI。支持翻译开关、中英文切换、字典包管理、加翻译。",
+  "description": "mcode CLI 简体中文汉化 Plugin。自带 i18n-shim + 3 个内置字典包,装上 Plugin 时自动安装到 mcode CLI,支持翻译开关、中英文切换、字典包管理、加翻译。",
   "author": "Ponkan",
   "icon": "icon.png",
   "category": "Code",

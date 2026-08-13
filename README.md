@@ -1,6 +1,6 @@
 # mcode-cli-zh
 
-> 让 [MiniMax Code CLI](https://github.com/) (mcode) 说出中文。一个本地 MiniMax Plugin,自带 i18n-shim + 3 个内置字典包,装上即用。
+> mcode CLI 简体中文汉化。一个本地 MiniMax Plugin,自带 i18n-shim + 3 个内置字典包,装上即用。
 
 ## 这是什么
 
