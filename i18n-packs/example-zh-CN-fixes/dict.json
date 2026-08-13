@@ -1,0 +1,7 @@
+{
+  "_meta": {
+    "locale": "zh-CN",
+    "notes": "示例字典。把你的翻译加进来,shim 会自动加载。"
+  },
+  "Hello, world!": "你好,世界!"
+}

@@ -1,0 +1,10 @@
+{
+  "id": "i18n-zh-CN",
+  "name": "简中通用字典",
+  "version": "0.2.0",
+  "type": "i18n",
+  "locale": "zh-CN",
+  "description": "Minimax Code CLI/TUI 表面文案的简体中文翻译:通用消息 + TUI 状态/权限/对话标签。",
+  "author": "mcode-i18n contributors",
+  "hooks": ["dict"]
+}

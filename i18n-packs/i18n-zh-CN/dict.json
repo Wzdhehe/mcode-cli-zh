@@ -1,0 +1,97 @@
+{
+  "_meta": {
+    "locale": "zh-CN",
+    "source": "mcode cli.js @ 0.0.1-beta.external.20260813.d2a863aa",
+    "version": "0.1.0",
+    "notes": "通用字典(原 i18n-zh-CN + tui-zh-CN 合并):TUI 状态、权限对话框、错误消息、MCP/login/provider 等通用文案。help_* 字段已拆到独立插件 cli-help-zh-CN。"
+  },
+  "tui_status": {
+    "READY": "就绪",
+    "SIGN IN": "请登录",
+    "WARNING": "警告",
+    "UNAVAILABLE": "不可用",
+    "Loading...": "加载中…",
+    "Thinking...": "思考中…",
+    "Thinking…": "思考中…",
+    "On": "打开",
+    "Off": "关闭"
+  },
+  "permission": {
+    "Allow once": "仅本次允许",
+    "Always allow": "始终允许",
+    "Deny": "拒绝",
+    "Permission resolved": "权限已处理",
+    "Approval needed": "需要审批"
+  },
+  "errors_session": {
+    "Couldn't open this session.": "无法打开此会话。",
+    "Couldn't attach that image.": "无法附加该图片。",
+    "Couldn't attach that file.": "无法附加该文件。",
+    "Couldn't paste media from the clipboard.": "无法从剪贴板粘贴媒体。",
+    "Couldn't prepare this message.": "无法准备此消息。",
+    "Couldn't send this message.": "无法发送此消息。",
+    "Clipboard media paste is unavailable in this host. Save the media and reference it in the prompt with @.": "当前主机不支持剪贴板媒体粘贴。请保存媒体并在提示中用 @ 引用。"
+  },
+  "update": {
+    "Install the update now? [y/N] ": "现在安装更新? [y/N] ",
+    "Update cancelled.": "已取消更新。",
+    "MCode ${v} is current on ${channel}.": "MCode ${v} 已是 ${channel} 上的最新版本。",
+    "MCode ${v} is newer than ${channel}.": "MCode ${v} 比 ${channel} 还新,未应用更新。",
+    "No interactive confirmation is available. Run `mcode update`": "无交互确认。请运行 `mcode update`"
+  },
+  "login": {
+    "Open: ${loginUrl}": "请在浏览器中打开:${loginUrl}",
+    "Waiting for browser login…": "等待浏览器登录…",
+    "Sign in to MiniMax Code": "登录 MiniMax Code",
+    "Authentication successful": "登录成功",
+    "Authentication failed": "登录失败",
+    "Run `mcode login` and try again": "请运行 `mcode login` 后重试"
+  },
+  "mcp": {
+    "MCP server transport is incomplete. Configure a command or URL and retry.": "MCP 服务传输配置不完整。请配置命令或 URL 后重试。",
+    "MCP connection support is unavailable in this Runtime.": "当前 Runtime 不支持 MCP 连接。",
+    "MCP server connection failed. Retry or check its configuration.": "MCP 服务连接失败。请重试或检查其配置。",
+    "MCP server transport closed": "MCP 服务传输已关闭",
+    "MCP list tools failed:": "MCP 工具列表获取失败:",
+    "MCP server stderr stream error": "MCP 服务 stderr 流错误"
+  },
+  "provider": {
+    "Provider API key is missing. Set ${env} or pass --api-key-env <name>.": "缺少提供商 API 密钥。请设置 ${env} 或传入 --api-key-env <name>。",
+    "Provider added: ${name}": "已添加提供商:${name}",
+    "Provider removed: ${providerId}": "已删除提供商:${providerId}",
+    "Provider available: ${providerId}/${modelId}": "提供商可用:${providerId}/${modelId}",
+    "MiniMax API Key saved and selected.": "MiniMax API 密钥已保存并选中。"
+  },
+  "common": {
+    "Yes": "是",
+    "No": "否",
+    "Cancel": "取消",
+    "Continue": "继续",
+    "Quit": "退出",
+    "Exit": "退出",
+    "Help": "帮助",
+    "Success": "成功",
+    "Failed": "失败",
+    "Error:": "错误:",
+    "Warning:": "警告:"
+  },
+  "transcript_kinds": {
+    "You": "你",
+    "Response": "回复",
+    "Preamble": "开场",
+    "Answers sent": "已发送回答",
+    "Agent question": "Agent 提问",
+    "Run duration": "运行耗时",
+    "Context compacted": "上下文已压缩",
+    "Usage\n": "用量\n",
+    "Inspection": "检视",
+    "Warning": "警告",
+    "Error": "错误",
+    "Changes": "变更",
+    "Summary": "摘要",
+    "Thinking…": "思考中…",
+    "Thinking": "思考模式",
+    "Thinking\n": "思考模式\n",
+    "Thinking ": "思考模式 "
+  }
+}

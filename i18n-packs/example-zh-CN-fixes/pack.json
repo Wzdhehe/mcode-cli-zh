@@ -1,0 +1,10 @@
+{
+  "id": "example-zh-CN-fixes",
+  "name": "示例:中文翻译补充插件",
+  "version": "0.1.0",
+  "type": "i18n",
+  "locale": "zh-CN",
+  "description": "群友贡献翻译的示例。复制本目录为模板,改 id/author/字典条目即可。",
+  "author": "mcode-i18n contributors",
+  "hooks": ["dict"]
+}

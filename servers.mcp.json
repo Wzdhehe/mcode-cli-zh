@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "mcpServers": {
+    "mcode-i18n": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["./server.js"],
+      "env": {},
+      "description": "mcode CLI 汉化: install / uninstall / switch / status。装上 Plugin 时自动 install,无需用户手动操作。",
+      "timeout": 30000
+    }
+  }
+}

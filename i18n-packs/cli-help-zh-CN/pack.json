@@ -1,0 +1,10 @@
+{
+  "id": "cli-help-zh-CN",
+  "name": "CLI help 子命令/选项翻译",
+  "version": "0.1.0",
+  "type": "cli-help",
+  "locale": "zh-CN",
+  "description": "mcode --help 输出中各子命令/选项/参数的中文翻译。",
+  "author": "mcode-i18n contributors",
+  "hooks": ["dict"]
+}
