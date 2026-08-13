@@ -29,7 +29,9 @@
 - "加一条翻译: 'Permission denied' → '权限被拒绝'"
 - "回滚 mcode 汉化"
 
-背后是 5 个 MCP 工具:`install` / `uninstall` / `switch` / `translate` / `status`。
+背后是 5 个 MCP 工具：`install` / `uninstall` / `switch` / `translate` / `status`。
+
+> ⚠️ `switch` / `translate` 改的是 `~/.mcode/config.json`，**重启 mcode 才生效**，不是热切换。临时试一下用 `$env:MCODE_LOCALE="en"; mcode --help` 或 `mcode --lang en --help`，只对当前命令立即生效。
 
 ## 内置字典包
 
