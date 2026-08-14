@@ -51,6 +51,46 @@ mcode --help
 
 > ⚠️ `switch` / `translate` 改的是 `~/.mcode/config.json`，**重启 mcode 才生效**，不是热切换。临时试一下用 `$env:MCODE_LOCALE="en"; mcode --help` 或 `mcode --lang en --help`，只对当前命令立即生效。
 
+## 当前覆盖
+
+v0.7 已翻译的 mcode 屏（按用户实测顺序）：
+
+| 屏 / 命令 | 覆盖范围 |
+|---|---|
+| `mcode --help` / 各子命令 --help | CLI help 文本（cli-help-zh-CN） |
+| TUI 启动首屏 | Tips / What's new / Ready 状态 |
+| TUI 状态栏 | Ready / Completed / 实时 LIVE / focused details |
+| TUI 输入框 | Enter send / Shift+Enter newline / Esc to close / @ file |
+| 权限对话框 | AUTO/自动授权 / ASK / FULL / Allow once / Always allow / Deny |
+| `/model` 命令 | Available models / ↑↓ select · ←/→ thinking · enter apply · esc cancel |
+| `/providers` 命令 | Providers / Models / Add custom / API key 配置 |
+| `/providers` 二级 | Configure MiniMax API Key / Saved locally / enter save and use |
+| `/help` 命令 | 键盘快捷键 + 斜杠命令 + Esc 关闭 + ↑↓/PgUp/PgDn 滚动 |
+| 模型生成中状态栏 | ⚡ ~132.0 tok/s · Enter 排队 · Ctrl+X 引导 · Ctrl+O 详情 · Esc 停止 |
+| MCode status 屏 | Directory / Branch / Worktree / Session ID / Title（保留蓝色 section header 英文） |
+| 错误消息 | MCP / 登录 / Provider / 剪贴板 / Session 等 |
+
+**总字典条目 ~250+**（3 个内置 pack 合并：i18n-zh-CN + cli-help-zh-CN + example-zh-CN-fixes）。
+
+## v0.7 改进（相对于 v0.6）
+
+**修 bug**：
+- 移除 `"No"` / `"select"` / `"Selection"` 等 2-3 字符短 key —— 之前会把 "Not" 切成"否t"、"selection" 切成"选择ion"（半翻译残渣）
+- 修 "Esc to close" ANSI 拆分 bug —— mcode 给 "to close" 单独反白导致 substring 切不开，加 `" to close"` + `"to close"` 双 key 绕过
+- "存储" 改为"保存"（机翻味重）
+
+**新增翻译**：
+- 完整短句风格翻译快捷键提示（"按 Enter 发送排队消息"、"按 Esc 停止" 等），而非裸键名
+- /model 屏底部、/help 屏底部、/providers 屏、welcome 屏、MCode status 屏全部覆盖
+- 完整 6 句首屏提示 + What's new + 模型生成状态栏
+- Enter 快捷键说明："发送消息；如工作中则排队"（比原"发送;MCode 工作时会接着发"清楚）
+
+**SKILL.md 改进**（基于 AI 反馈）：
+- 加"快速通道"段：按用户消息类型给路径（开/关/切/查/装/卸），而非按工具列表
+- translate 工具说明：明确"开关类操作直接调，不要先 status()"
+- 加"Plugin 不可用时 fallback"段：直接读/改 `~/.mcode/config.json` 的 `enabled` / `language` / `packs.disabled` 三个字段，绕过 MCP
+- 强化"Plugin 禁用 ≠ 卸载"：用户级 config 仍生效，Plugin 只负责写
+
 ## 安装位置
 
 **默认（标准 npm global 安装）**：
