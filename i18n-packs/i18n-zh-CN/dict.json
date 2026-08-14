@@ -133,7 +133,7 @@
     "Run /init to teach MCode this repo.": "运行 /init 让 mcode 学习本仓库。",
     "Send follow-ups while MCode works.": "mcode 工作中时可发后续消息。",
     "/context shows read-only session context.": "/context 显示只读会话上下文。",
-    "/feedback previews before upload.": "/feedback 在上传前预览。",
+    "/feedback previews before upload.": "/feedback 先预览反馈内容,再上传。",
     "thinking": "思考模式",
     "select": "选择",
     "Not configured": "未配置",
