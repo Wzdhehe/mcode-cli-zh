@@ -2,8 +2,8 @@
   "_meta": {
     "locale": "zh-CN",
     "source": "mcode cli.js @ 0.0.1-beta.external.20260813.d2a863aa",
-    "version": "0.1.0",
-    "notes": "通用字典(原 i18n-zh-CN + tui-zh-CN 合并):TUI 状态、权限对话框、错误消息、MCP/login/provider 等通用文案。help_* 字段已拆到独立插件 cli-help-zh-CN。"
+    "version": "0.2.0",
+    "notes": "通用字典(原 i18n-zh-CN + tui-zh-CN 合并):TUI 状态、权限对话框(含 Permission TUI 菜单:ASK/AUTO/FULL)、错误消息、MCP/login/provider 等通用文案。help_* 字段已拆到独立插件 cli-help-zh-CN。"
   },
   "tui_status": {
     "READY": "就绪",
@@ -21,7 +21,19 @@
     "Always allow": "始终允许",
     "Deny": "拒绝",
     "Permission resolved": "权限已处理",
-    "Approval needed": "需要审批"
+    "Approval needed": "需要审批",
+    "Choose how MCode handles tool access.": "选择 MCode 如何处理工具访问。",
+    "ASK ": "询问 ",
+    "Confirm sensitive actions": "确认敏感操作",
+    "AUTO": "自动",
+    "Ask only when risk is high": "仅高风险时询问",
+    "FULL": "完全",
+    "Run without confirmation": "无需确认直接运行",
+    "active": "当前",
+    "Current": "当前",
+    "select": "选择",
+    "Enter apply": "按 Enter 选中",
+    "Esc cancel": "按 Esc 取消"
   },
   "errors_session": {
     "Couldn't open this session.": "无法打开此会话。",
