@@ -90,7 +90,9 @@
     "Failed": "失败",
     "Error:": "错误:",
     "Warning:": "警告:",
-    "next message enters Plan": "下一条消息进入 Plan"
+    "next message enters Plan": "下一条消息进入 Plan",
+    "@ file": "@ 添加文件",
+    "/ autocomplete": "/ 命令列表"
   },
   "transcript_kinds": {
     "You": "你",
