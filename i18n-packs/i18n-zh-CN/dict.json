@@ -92,7 +92,8 @@
     "Warning:": "警告:",
     "next message enters Plan": "下一条消息进入 Plan",
     "@ file": "@ 添加文件",
-    "/ autocomplete": "/ 命令列表"
+    "/ autocomplete": "/ 命令列表",
+    "Esc to close": "按 Esc 关闭"
   },
   "transcript_kinds": {
     "You": "你",
