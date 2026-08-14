@@ -89,7 +89,8 @@
     "Success": "成功",
     "Failed": "失败",
     "Error:": "错误:",
-    "Warning:": "警告:"
+    "Warning:": "警告:",
+    "next message enters Plan": "下一条消息进入 Plan"
   },
   "transcript_kinds": {
     "You": "你",
