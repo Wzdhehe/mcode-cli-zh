@@ -94,6 +94,8 @@
     "@ file": "@ 添加文件",
     "/ autocomplete": "/ 命令列表",
     "Esc to close": "按 Esc 关闭",
+    "Enter send": "Enter 发送",
+    "Shift+Enter newline": "Shift+Enter 换行",
     "/goal <objective>: set or update the current Session Goal.": "/goal <objective>:设置或更新当前会话目标。",
     "/goal clear: remove the current Goal.": "/goal clear:移除当前目标。",
     "/goal edit: load the current objective into the composer.": "/goal edit:将当前目标加载到编辑器。",
