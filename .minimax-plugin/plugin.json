@@ -2,8 +2,8 @@
   "schemaVersion": 1,
   "name": "mcode-cli-zh",
   "displayName": "mcode CLI 汉化",
-  "version": "0.4.2",
-  "description": "mcode CLI 简体中文汉化 Plugin。自带 i18n-shim + 3 个内置字典包,装上 Plugin 时自动安装到 mcode CLI,支持翻译开关、中英文切换、字典包管理、加翻译。",
+  "version": "0.5.0",
+  "description": "mcode CLI 简体中文汉化 Plugin。自带 i18n-shim + 3 个内置字典包,装上 Plugin 时自动安装到 mcode CLI。支持中英文切换、翻译开关、字典包管理、加翻译。⚠️ 禁用 Plugin 不会回滚已装的翻译机制。",
   "author": "Ponkan",
   "icon": "icon.png",
   "category": "Code",
@@ -15,6 +15,7 @@
     "打开 mcode 汉化翻译",
     "禁用 i18n-zh-CN 字典包",
     "加一条翻译: 'Permission denied' → '权限被拒绝'",
+    "mcode 汉化没生效,看看哪有问题",
     "回滚 mcode 汉化"
   ],
   "apps": [],

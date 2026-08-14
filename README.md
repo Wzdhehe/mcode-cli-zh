@@ -2,25 +2,43 @@
 
 > mcode CLI 简体中文汉化。一个本地 MiniMax Plugin,自带 i18n-shim + 3 个内置字典包,装上即用。
 
+[GitHub 仓库](https://github.com/Wzdhehe/mcode-cli-zh) · [TROUBLESHOOTING](TROUBLESHOOTING.md) · [CONTRIBUTING](CONTRIBUTING.md)
+
 ## 这是什么
 
-`mcode-cli-zh` 是一个本地 [MiniMax Code](https://github.com/) Plugin,把 mcode CLI/TUI 的表面文案翻译成简体中文。
+把 [MiniMax Code CLI](https://github.com/) (mcode) 的表面文案翻译成简体中文：
 
-- **翻译内容**:`mcode --help`、TUI 启动横幅、状态栏、权限对话框、思考中、加载中等高频短语、错误消息(MCP / 登录 / Provider / 剪贴板 / Session)
-- **中英可切换**:`MCODE_LOCALE=en mcode` 回退英文(与原版 byte-for-byte 一致)
-- **翻译开关**:`enabled: true/false` 独立于 language,关掉就是英文,不删任何文件
-- **自动安装**:Plugin 装上后,MCP server 启动时自动把 shim + 字典包复制到 mcode 目录,改 `mcode.cmd` 注入 `--import i18n-shim.mjs`,备份原 `.cmd` 为 `.cmd.bak`
+- `mcode --help` / `mcode exec --help` / `mcode provider --help` 等 CLI 帮助文本
+- TUI 启动横幅、状态栏、权限对话框、思考中、加载中等高频短语
+- 错误消息（MCP / 登录 / Provider / 剪贴板 / Session）
+- 通过字典包系统加载翻译
 
-## 安装(给用户)
+**支持的操作**：
+- 中英文切换（`zh-CN` / `en` / `zh-TW`）
+- 翻译开关（独立于语言切换）
+- 字典包管理（启用/禁用/新增）
+- 翻译条目增删
 
-1. 把这个仓库内容放到 `~/.minimax/plugins/mcode-cli-zh/`
-2. 打开 Mavis(MiniMax Code)桌面,会看到 **mcode CLI 汉化** 卡片
-3. 启用 Plugin,**MCP server 启动时自动 install**——不用手动操作
-4. 重启 mcode CLI,生效
+**特别注意**：本 Plugin 是**翻译管理者**（装/卸/配置），不是翻译本身。翻译机制装在你机器上后，Plugin 启不启用跟翻译没关系。详见 [TROUBLESHOOTING.md#5](TROUBLESHOOTING.md#5-禁用-plugin-后翻译还在)。
 
-## 用法(给 Mavis)
+## 快速开始
 
-启用 Plugin 后,直接对 Mavis 说:
+### 给用户（用 mcode）
+
+1. **装 Mavis 桌面**（如果还没装）
+2. **装这个 Plugin**：把仓库 clone 到 `~/.minimax/plugins/mcode-cli-zh/`
+3. **打开 Mavis**，会看到 "mcode CLI 汉化" 卡片
+4. **启用 Plugin** — MCP server 启动时**自动 install**：把 shim + 字典包复制到你的 mcode 目录，改 `mcode.cmd` 注入 `--import`
+5. **重启 mcode**，翻译生效
+
+```powershell
+# 验证（应该看到中文）
+mcode --help
+```
+
+### 给 Mavis（让 agent 帮你操作）
+
+启用 Plugin 后，直接对 Mavis 说：
 
 - "帮我装 mcode 汉化"
 - "把 mcode 切到英文"
@@ -33,37 +51,51 @@
 
 > ⚠️ `switch` / `translate` 改的是 `~/.mcode/config.json`，**重启 mcode 才生效**，不是热切换。临时试一下用 `$env:MCODE_LOCALE="en"; mcode --help` 或 `mcode --lang en --help`，只对当前命令立即生效。
 
-## 内置字典包
+## 安装位置
 
-| ID | 用途 |
-|---|---|
-| `i18n-zh-CN` | 通用文案(TUI 状态、权限、错误、MCP/login/provider) |
-| `cli-help-zh-CN` | CLI help 文本(`mcode --help` / `exec --help` / `provider --help`) |
-| `example-zh-CN-fixes` | 示例包(可复制为模板,贡献翻译的起点) |
+**默认（标准 npm global 安装）**：
+- Windows: `%APPDATA%\npm\` 或 `%LOCALAPPDATA%\npm\`
+- macOS / Linux: `npm root -g` 的输出
 
-## 字典包优先级
+Plugin 启动时**自动探测**这两个位置。如果你的 mcode 装在别处（比如 `~/.minimax-code/`），调 install 时传 `mcodeDir`：
 
-1. `MCODE_LOCALE` 环境变量(如 `zh-CN`, `en`)
-2. `mcode --lang <locale>` 命令行
-3. `~/.mcode/config.json` 的 `language` 字段(默认 `zh-CN`)
-4. 系统 `LANG` / `LC_ALL`(以 `zh*` 开头视为中文)
-5. fallback: `en`(不翻译)
-
-## 配置 (`~/.mcode/config.json`)
-
-```json
-{
-  "language": "zh-CN",
-  "enabled": true,
-  "packs": { "disabled": [] }
-}
+```
+mcode_i18n_install(mcodeDir="<你的 mcode 安装目录>")
 ```
 
-| 字段 | 含义 | 默认 |
+或者把 mcode 所在目录加到系统 `PATH`，重启 Mavis 让 MCP server 重启探测。
+
+## mcode 启动器说明
+
+mcode 安装目录下通常有**三个**启动器：
+
+| 文件 | 用途 | Windows 上谁调它 |
 |---|---|---|
-| `language` | locale (`zh-CN` / `zh-TW` / `en`) | `zh-CN` |
-| `enabled` | 翻译开关(独立于 language) | `true` |
-| `packs.disabled` | 禁用的字典包 ID 列表 | `[]` |
+| `mcode` | POSIX shell 脚本 | **不调**（Windows 不识别无扩展名） |
+| `mcode.cmd` | cmd.exe 启动器 | **PowerShell / cmd 默认调它** |
+| `mcode.ps1` | PowerShell 启动器 | 显式调或别名时 |
+
+**Windows 上**：`Get-Command mcode` 返回 `mcode.cmd`。所以**改 `mcode.cmd` 才是 Windows 翻译生效的关键**。Plugin 的 `install` 工具会**同时改三个**（cmd + shell + ps1），但 Windows 上只要 `mcode.cmd` 改对就生效。
+
+## 卸载
+
+**方法 A：用 Plugin 工具**（推荐）
+
+```
+mcode_i18n_uninstall()  # 恢复 mcode.cmd + 删 shim + 删 packs
+```
+
+**方法 B：手动 PowerShell**
+
+```powershell
+# 1. 恢复 mcode.cmd（原版备份）
+Copy-Item 'C:\Users\<user>\.minimax-code\mcode.cmd.bak' 'C:\Users\<user>\.minimax-code\mcode.cmd' -Force
+
+# 2. 删 shim + packs + 用户配置
+Remove-Item 'C:\Users\<user>\.minimax-code\i18n-shim.mjs' -Force
+Remove-Item 'C:\Users\<user>\.minimax-code\i18n-packs\' -Recurse -Force
+Remove-Item 'C:\Users\<user>\.mcode\config.json' -Force
+```
 
 ## 调试
 
@@ -72,23 +104,44 @@ $env:MCODE_I18N_DEBUG = "1"
 mcode --help 2>&1
 ```
 
-漏译在 `~/.mcode/logs/i18n.log`,Plugin 操作日志在 `~/.mcode/logs/mcode-cli-zh.log`。
+漏译在 `~/.mcode/logs/i18n.log`，Plugin 操作日志在 `~/.mcode/logs/mcode-cli-zh.log`。
 
-## 回滚
+**翻译不生效？** 看 [TROUBLESHOOTING.md](TROUBLESHOOTING.md) 一步步排查。
 
-```powershell
-# 调 MCP 工具 uninstall
-mcode_i18n_uninstall()
+## 硬性约束（给贡献者 / Mavis）
+
+- ❌ 不要改 `node_modules\@minimax-ai\code\` 下任何文件（npm 升级会覆盖 + 触发签名校验）
+- ❌ 不要调 `mcode update` / `mcode login` / `mcode provider add`（改远程状态）
+- ❌ 不要在 mcode 进程跑着的时候改 `dict.json`（运行中改会被覆盖）
+- ❌ 不要删 `mcode.cmd.bak`（回滚用）
+
+## 贡献
+
+想加翻译？看 [CONTRIBUTING.md](CONTRIBUTING.md)。流程很简单：改 `dict.json` → 重启 mcode → 验证 → 提 PR。
+
+## 仓库结构
+
 ```
-
-恢复 `mcode.cmd`(从 `.cmd.bak`),删除 `i18n-shim.mjs` / `i18n-packs/` / `mcode.ps1`。**保留** `~/.mcode/config.json` 和 `~/.mcode/i18n-packs/`(用户级数据不动)。
-
-## 硬性约束(给贡献者 / Mavis)
-
-- ❌ 不要改 `node_modules\@minimax-ai\code\` 下任何文件(npm 升级会覆盖 + 触发签名校验)
-- ❌ 不要调 `mcode update` / `mcode login` / `mcode provider add`
-- ❌ 不要在 mcode 进程跑着的时候改 `dict.json`(运行中改会被覆盖)
-- ❌ 不要删 `mcode.cmd.bak`(回滚用)
+mcode-cli-zh/
+├── .minimax-plugin/
+│   └── plugin.json              ← Plugin manifest
+├── icon.png
+├── i18n-shim.mjs                ← shim 本体（带 enabled 开关）
+├── i18n-packs/
+│   ├── i18n-zh-CN/              ← 通用字典
+│   ├── cli-help-zh-CN/          ← CLI help 文本
+│   └── example-zh-CN-fixes/     ← 示例/模板（贡献者参考）
+├── mcode.ps1                    ← PowerShell 启动器模板
+├── server.js                    ← MCP 服务器（5 工具）
+├── servers.mcp.json             ← MCP manifest
+├── skills/
+│   └── mcode-cli-zh/
+│       └── SKILL.md             ← Mavis 工作流
+├── README.md                    ← 本文件
+├── TROUBLESHOOTING.md           ← 排错指南
+├── CONTRIBUTING.md              ← 贡献指南
+└── .gitignore
+```
 
 ## License
 

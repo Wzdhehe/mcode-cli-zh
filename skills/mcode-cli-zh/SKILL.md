@@ -90,12 +90,46 @@ C:\Users\<user>\.minimax\plugins\mcode-cli-zh\   ← 本 Plugin 目录
 
 `mcode` 装在非默认位置时,目录里通常有**三个**启动器:
 - `mcode`(POSIX shell 脚本,`#!/bin/sh`)— `where mcode` 找到的第一个
-- `mcode.cmd`(cmd.exe 启动器)
+- `mcode.cmd`(cmd.exe 启动器)— **Windows 上 PowerShell/cmd 默认走这个**(`Get-Command mcode` 验证)
 - `mcode.ps1`(PowerShell 启动器)
 
-`where mcode` 输出顺序是先 shell 脚本,后 .cmd。**`mcode` 命令实际走的是 shell 脚本,不是 .cmd**。如果只改 .cmd 不改 shell 脚本,`mcode` 命令的翻译还是不生效。
+`where mcode` 输出顺序是先 shell 脚本,后 .cmd。但 PowerShell 跑 `mcode` 时,只识别 `mcode.cmd`(不识别无扩展名的 `mcode`)。所以:
 
-`install` 工具**会同时改这三个**(shell + cmd + ps1),所以正常 install 不会踩这个坑。但如果手动改,记得三个都改。
+- **Windows 上**:改 `mcode.cmd` 才是翻译生效的关键
+- **macOS / Linux 上**:改 `mcode` shell 脚本
+
+`install` 工具**会同时改三个**(shell + cmd + ps1),所以正常 install 不会踩这个坑。但如果手动改,记得三个都改。
+
+## 已知坑:Plugin 禁用 ≠ 卸载!
+
+Plugin 只是**管理者**(装/卸/配置),不是翻译本身。翻译机制(改过的 `mcode.cmd` + shim + 字典包)装在你机器上后,Plugin 启不启用跟翻译没关系。
+
+| 操作 | 影响 |
+|---|---|
+| 在 Mavis 桌面禁用 Plugin | MCP server 停了,翻译继续生效 |
+| 调 `translate({on: false})` | config.json 改 `enabled: false`,下次 mcode 启动后翻译关闭 |
+| 调 `uninstall()` | 恢复 mcode.cmd + 删 shim + 删 packs,翻译彻底没了 |
+
+用户经常误以为"禁用 Plugin = 翻译关闭",但实际上**不是**。如果用户想关翻译,要让他们先**重新启用 Plugin** → 调 `translate(false)` 或 `uninstall` → 重启 mcode。
+
+## 已知坑:bash 启动器的 file:// URL
+
+修改 `mcode` shell 启动器时,POSIX 风格路径(`/c/Users/...`)拼成 `file:///$basedir/...` 是 **4 个斜杠**,Node 拒绝(必须 `file:///C:/...` 3 斜杠 + 盘符)。
+
+**正确做法**:用 `cygpath -w` 把 `$basedir` 转为 Windows 路径,再构造 URL:
+
+```sh
+case `uname` in
+    *CYGWIN*|*MINGW*|*MSYS*)
+        if command -v cygpath > /dev/null 2>&1; then
+            basedir=`cygpath -w "$basedir"`
+        fi
+    ;;
+esac
+shim_url="file:///${basedir//\\/\/}/i18n-shim.mjs"
+```
+
+`mcode.cmd` 用 `file:///%dp0%\i18n-shim.mjs`(反斜杠)Node 也接受,所以**Windows 上一般不踩这个坑**(走 `mcode.cmd` 就行)。
 
 ## 工作流
 
@@ -247,12 +281,15 @@ Get-Content ~/.mcode/logs/i18n.log -Tail 50
 Get-Content ~/.mcode/logs/mcode-cli-zh.log -Tail 20
 ```
 
-**常见失效原因**:
-- `mcode update` 升级了 mcode,把 `mcode.cmd` 覆盖了 → **调 `install` 工具重新注入**
-- dict.json JSON 不合法 → 看 shim 日志 `dict parse failed`
-- 用户级字典包 `pack.json` 的 `id` 重复了 → shim 跳过
-- locale fallback 到 `en` → `active locale: en`,改 `~/.mcode/config.json` 的 `language` 字段
-- **`enabled: false` 看不到翻译** → 看 shim 日志 `translation disabled by config`,调 `translate(true)` 或删 `enabled` 字段
+**完整排错指南**: [TROUBLESHOOTING.md](../../TROUBLESHOOTING.md) — 覆盖所有常见问题。
+
+**常见失效原因速查**:
+- **完全没有 debug 输出** → shim 根本没加载,`mcode.cmd` 没有 `--import` 行 → 调 `install()`
+- `locale fallback to en` + `dict total entries: 0` → `~/.mcode/config.json` 不存在或路径不对 → 调 `install()` 或手动创建
+- `mcode update` 升级了 mcode → `mcode.cmd` 被覆盖 → 调 `install()` 重新注入
+- dict.json JSON 不合法 → shim 日志 `dict parse failed`
+- 用户级字典包 `pack.json` 的 `id` 重复 → shim 跳过
+- **`enabled: false` 看不到翻译** → 看 shim 日志 `translation disabled by config`,调 `translate({on: true})` 或删 `enabled` 字段
 
 ### 7. 回滚 / 卸载
 
@@ -289,3 +326,4 @@ mcode_i18n_uninstall()
 - ❌ 不要在 mcode 跑着的时候改 dict.json
 - ❌ 不要硬装一个"中文"就完事——必须走 `install` / `switch` MCP 工具
 - ❌ 不要让用户把翻译写到 `node_modules\@minimax-ai\code\` 下(npm 会覆盖)
+- ❌ 不要告诉用户"禁用 Plugin = 卸载翻译"——这是错的,翻译继续生效。要引导他们用 `translate(false)` 或 `uninstall`

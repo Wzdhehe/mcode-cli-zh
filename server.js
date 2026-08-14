@@ -21,7 +21,7 @@ const HOME = homedir();
 const MCODE_HOME = join(HOME, ".mcode");
 const CONFIG_PATH = join(MCODE_HOME, "config.json");
 const LOG_PATH = join(MCODE_HOME, "logs", "mcode-cli-zh.log");
-const PLUGIN_VERSION = "0.4.2";
+const PLUGIN_VERSION = "0.5.0";
 
 // ─── Logging ───────────────────────────────────────────────────────────
 function log(...args) {
@@ -81,7 +81,7 @@ function install(args) {
   } else {
     log("install: using user-provided mcodeDir:", mcodeDir);
   }
-  if (!mcodeDir) throw new Error("mcode installation not found. Try passing mcodeDir explicitly (e.g., the directory containing mcode.cmd).");
+  if (!mcodeDir) throw new Error(mcodeNotFoundHint());
 
   const steps = [];
   const cmdPath = join(mcodeDir, "mcode.cmd");
@@ -138,32 +138,34 @@ function install(args) {
       } else {
         steps.push("mcode.bak already exists, not overwriting");
       }
-      // 在 exec ... "$basedir/node_modules/@minimax-ai/code/cli.js" 前面加 --import
+      // 注入一个 shim wrapper,正确处理 file:// URL(避免 4 斜杠问题)
+      // 不直接改 exec 行,而是在 shim 加载前把 $basedir 转 Windows 路径
+      const shimInject = `i18n_shim_url="file:///\${basedir//\\\\/\\/}/i18n-shim.mjs"\n`;
+      const wrapper = `# i18n-shim injection (mcode-cli-zh Plugin)\n` +
+        (platform === "win32"
+          ? `case \`uname\` in *CYGWIN*|*MINGW*|*MSYS*) if command -v cygpath > /dev/null 2>&1; then basedir=\`cygpath -w "$basedir"\`; fi ;; esac\n`
+          : ``) +
+        shimInject;
+      // 在 exec 行前面插入 wrapper
       const modified = shContent.replace(
-        /(exec\s+("[^"]*"|'[^']*'|\$\w+)\s+)(("[^"]*"|'[^']*'|\$\w+)\s+)?("\$basedir\/node_modules\/@minimax-ai\/code\/cli\.js"|'\$\{basedir\}\/node_modules\/@minimax-ai\/code\/cli\.js')/g,
-        (match, p1, p2, p3, p4) => {
-          // p1 = "exec " (含可能有的 "$basedir/node" 或 "node")
-          // 注入 --import "file:///$basedir/i18n-shim.mjs"
-          return `${p1}--import "file:///$basedir/i18n-shim.mjs" ${p4}`;
-        }
+        /(\nif \[ -x "\$basedir\/node" \]; then)/,
+        `\n${wrapper}$1`
       );
-      // 简化方案:用更精确的 regex
-      const simpleModified = shContent.replace(
-        /("\$basedir\/node"\s+|\bnode\s+)("\$basedir\/node_modules\/@minimax-ai\/code\/cli\.js")/g,
-        '$1--import "file:///$basedir/i18n-shim.mjs" $2'
-      );
-      const finalMod = simpleModified !== shContent ? simpleModified : modified;
-      if (finalMod !== shContent) {
-        writeFileSync(shPath, finalMod, "utf8");
-        steps.push("injected --import into mcode (shell)");
+      if (modified !== shContent) {
+        writeFileSync(shPath, modified, "utf8");
+        steps.push("injected i18n-shim wrapper into mcode (shell)");
       } else {
-        steps.push("WARN: mcode (shell) format unexpected, --import not injected");
+        steps.push("WARN: mcode (shell) format unexpected, wrapper not injected");
       }
     }
   }
 
   // 5. Create mcode.ps1 (PowerShell launcher template)
-  if (!existsSync(ps1Path) && existsSync(BUNDLED_PS1)) {
+  // 注意:如果存在 mcode.ps1.disabled(用户主动禁用的),不要自动还原
+  const ps1DisabledPath = join(mcodeDir, "mcode.ps1.disabled");
+  if (!existsSync(ps1Path) && existsSync(ps1DisabledPath)) {
+    steps.push(`mcode.ps1.disabled exists, not auto-restoring (user disabled intentionally)`);
+  } else if (!existsSync(ps1Path) && existsSync(BUNDLED_PS1)) {
     copyFileSync(BUNDLED_PS1, ps1Path);
     steps.push(`created -> ${ps1Path}`);
   }
@@ -172,6 +174,14 @@ function install(args) {
   if (!existsSync(CONFIG_PATH)) {
     writeJson(CONFIG_PATH, { language: "zh-CN", enabled: true });
     steps.push(`created -> ${CONFIG_PATH}`);
+  } else {
+    // If config exists but missing enabled field, default to true
+    const cfg = readJson(CONFIG_PATH, {});
+    if (cfg.enabled === undefined) {
+      cfg.enabled = true;
+      writeJson(CONFIG_PATH, cfg);
+      steps.push(`added enabled=true to existing config`);
+    }
   }
 
   log("install:", steps.join(" | "));
