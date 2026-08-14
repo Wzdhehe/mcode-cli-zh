@@ -97,7 +97,7 @@
     "Guide the current response with the current Draft": "用当前 Draft 引导当前响应",
     "Close the current panel, or interrupt the active turn": "关闭当前面板,或中断进行中的回合",
     "Clear input, arm exit, or stop as a secondary shortcut": "清空输入、预备退出或作为次要快捷键停止",
-    "Send; while MCode works it sends next": "发送;MCode 工作时会接着发"
+    "Send; while MCode works it sends next": "发送消息;如工作中则排队"
   },
   "tui_slash": {
     "Slash commands": "斜杠命令",

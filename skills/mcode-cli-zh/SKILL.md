@@ -20,6 +20,25 @@ description: 当用户要求查询、切换、加翻译、调试或回滚 mcode 
 - "回滚 mcode 汉化" / "卸载 mcode 汉化"
 - "列一下当前加载的字典包"
 
+## 快速通道(按用户消息给路径)
+
+> **Mavis 拿到本 SKILL 后,优先看这一段**——按用户消息直接选工具,不要先全表扫。
+
+| 用户说 | 直接调 |
+|---|---|
+| "开/关翻译"、"打开/关掉汉化"、"翻译生效吗" | `translate({on: true / false})` |
+| "切到英文/中文"、"切回中文" | `switch({locale: "en" / "zh-CN"})` |
+| "mcode 汉化没生效"、"看看现在什么状态" | `status()` |
+| "装一下"、"重装"、"修复" | `install()` |
+| "卸载/回滚" | `uninstall()` |
+| "加一条翻译: 'X' → 'Y'" | 改 dict.json(看下面 §4) |
+| "禁用/启用某个字典包" | 改 `~/.mcode/config.json` 的 `packs.disabled` |
+
+**判断原则**:
+- 用户要"开关/切换"操作 → **直接调对应工具**,**不要先 `status()` 看看**(用户没问状态就别多此一举)
+- 用户说"看看现在什么"、"诊断" → 调 `status()`
+- 用户场景不明确 → 先 `status()` 看现状,再决定调什么
+
 ## 翻译开关(独立于 language)
 
 `translate(on/off)` 工具控制翻译是否生效,跟 `switch(locale)` 是两件正交的事:
@@ -112,6 +131,31 @@ Plugin 只是**管理者**(装/卸/配置),不是翻译本身。翻译机制(改
 
 用户经常误以为"禁用 Plugin = 翻译关闭",但实际上**不是**。如果用户想关翻译,要让他们先**重新启用 Plugin** → 调 `translate(false)` 或 `uninstall` → 重启 mcode。
 
+## 已知坑:Plugin 不可用时,直接改 config.json
+
+**场景**:用户问"翻译没生效/翻译是开的还是关的",但当前 session 的工具列表里**没有 `mcode_i18n_*`**(Plugin 禁用、marketplace 没拉、或者 minimax-code MCP 是 lazy load 等原因)。
+
+**Mavis 容易犯的错**:
+1. 反复 `status()` 试探——失败,没有这些工具
+2. 跑去读 Plugin 目录、读 config.json,试图"理解"为什么工具不在
+3. 给出"请启用 Plugin"的回答——但用户问的是状态,不是问怎么办
+
+**正确做法——直接读 `~/.mcode/config.json`**:
+- 翻译开关 = `config.enabled` 字段(`true` / `false` / 缺省 = `true`)
+- 当前语言 = `config.language` 字段(`zh-CN` / `en` / 缺省 = `zh-CN`)
+- 禁用字典包 = `config.packs.disabled` 数组
+
+```powershell
+# 看翻译开关
+Get-Content ~/.mcode/config.json | ConvertFrom-Json | Select-Object enabled, language
+```
+
+**哪些情况可以直接改 config.json 跳过 Plugin**:
+- 用户**只要改 enabled/language/disabled 字段**——直接改,不用调 MCP
+- 用户要**重装/修复** shim 或字典包——必须用 Plugin 的 `install()`,**不能**只改 config
+
+**反过来说**:即使 Plugin 不可用,`config.json` 里的 `enabled` 和 `language` 仍生效(mcode 自己读),Plugin 只是负责**写**。**别被"Plugin 禁用"误导**。
+
 ## 已知坑:bash 启动器的 file:// URL
 
 修改 `mcode` shell 启动器时,POSIX 风格路径(`/c/Users/...`)拼成 `file:///$basedir/...` 是 **4 个斜杠**,Node 拒绝(必须 `file:///C:/...` 3 斜杠 + 盘符)。
@@ -160,6 +204,8 @@ mcode_i18n_translate(on=true | false)
 ```
 
 **结果**:`~/.mcode/config.json` 的 `enabled` 字段被更新。**告诉用户重启 mcode 生效**。
+
+> ⚠️ **不要先 `status()` 看看**。用户说"开/关翻译"就是要操作,直接调 `translate()`,省一次工具调用。只有用户**主动问"现在翻译是开的还是关的"**才用 `status()`。
 
 **典型场景**:
 - "关掉翻译" → `translate(false)`
