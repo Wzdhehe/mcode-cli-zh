@@ -61,9 +61,11 @@ C:\Users\<user>\.minimax\plugins\mcode-cli-zh\   ← 本 Plugin 目录
 
 # 装上 Plugin 后,会被复制到 mcode 安装目录:
 <mcode-dir>\
-├── mcode.cmd      (原版被备份为 .cmd.bak,新版本含 --import)
-├── mcode.cmd.bak  (原版备份,回滚用)
-├── mcode.ps1      (新建,本 Plugin 提供)
+├── mcode          (POSIX shell 启动器,原版备份为 .bak,新版本含 --import)
+├── mcode.bak      (shell 启动器原版备份,回滚用)
+├── mcode.cmd      (cmd.exe 启动器,原版备份为 .cmd.bak,新版本含 --import)
+├── mcode.cmd.bak  (cmd.exe 启动器原版备份,回滚用)
+├── mcode.ps1      (PowerShell 启动器模板,新建)
 ├── i18n-shim.mjs
 └── i18n-packs\... (从 Plugin 复制)
 
@@ -84,7 +86,34 @@ C:\Users\<user>\.minimax\plugins\mcode-cli-zh\   ← 本 Plugin 目录
 - ❌ **不要让用户手动删 `mcode.cmd.bak`**(回滚用)
 - ❌ **不要硬装一个"中文"就完事**——必须走 MCP 工具的 `install` / `switch`,否则下次启动被覆盖
 
+## 已知坑:mcode 启动器不止一个!
+
+`mcode` 装在非默认位置时,目录里通常有**三个**启动器:
+- `mcode`(POSIX shell 脚本,`#!/bin/sh`)— `where mcode` 找到的第一个
+- `mcode.cmd`(cmd.exe 启动器)
+- `mcode.ps1`(PowerShell 启动器)
+
+`where mcode` 输出顺序是先 shell 脚本,后 .cmd。**`mcode` 命令实际走的是 shell 脚本,不是 .cmd**。如果只改 .cmd 不改 shell 脚本,`mcode` 命令的翻译还是不生效。
+
+`install` 工具**会同时改这三个**(shell + cmd + ps1),所以正常 install 不会踩这个坑。但如果手动改,记得三个都改。
+
 ## 工作流
+
+### 0. 探测 mcode 位置失败?(最常见的坑)
+
+`install` 默认通过两条路径探测 mcode 位置:
+1. `where mcode`(Windows) / `which mcode`(Unix)
+2. `npm root -g` + 检查 `<globalRoot>/@minimax-ai/code/cli.js`
+
+**如果 mcode 装在非标准位置(比如 `~/.minimax-code/` 这种自定义目录),探测会失败**。`status` 返回 `mcodeInstalled: false`。
+
+**手动指定路径**:
+```
+mcode_i18n_install(mcodeDir="C:\\Users\\<user>\\.minimax-code")
+```
+传 `mcodeDir` 后会跳过探测,直接用你给的路径。
+
+**或者**:把 mcode 所在目录加到系统 `PATH`,重启 Mavis 让 MCP server 重新探测。
 
 ### 1. 翻译开关(独立于语言)
 

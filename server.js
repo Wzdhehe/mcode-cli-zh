@@ -21,7 +21,7 @@ const HOME = homedir();
 const MCODE_HOME = join(HOME, ".mcode");
 const CONFIG_PATH = join(MCODE_HOME, "config.json");
 const LOG_PATH = join(MCODE_HOME, "logs", "mcode-cli-zh.log");
-const PLUGIN_VERSION = "0.4.0";
+const PLUGIN_VERSION = "0.4.2";
 
 // ─── Logging ───────────────────────────────────────────────────────────
 function log(...args) {
@@ -73,16 +73,24 @@ function writeJson(path, obj) {
 }
 
 // ─── Tool: install ────────────────────────────────────────────────────
-function install() {
-  const mcodeDir = detectMcodeDir();
-  if (!mcodeDir) throw new Error("mcode installation not found. Please install @minimax-ai/code first.");
+function install(args) {
+  // 优先用参数指定的 mcodeDir,fallback 到探测
+  let mcodeDir = args?.mcodeDir;
+  if (!mcodeDir) {
+    mcodeDir = detectMcodeDir();
+  } else {
+    log("install: using user-provided mcodeDir:", mcodeDir);
+  }
+  if (!mcodeDir) throw new Error("mcode installation not found. Try passing mcodeDir explicitly (e.g., the directory containing mcode.cmd).");
 
   const steps = [];
   const cmdPath = join(mcodeDir, "mcode.cmd");
+  const shPath = join(mcodeDir, "mcode");
   const ps1Path = join(mcodeDir, "mcode.ps1");
   const shimPath = join(mcodeDir, "i18n-shim.mjs");
   const packsPath = join(mcodeDir, "i18n-packs");
-  const bakPath = join(mcodeDir, "mcode.cmd.bak");
+  const cmdBakPath = join(mcodeDir, "mcode.cmd.bak");
+  const shBakPath = join(mcodeDir, "mcode.bak");
 
   if (!existsSync(cmdPath)) throw new Error(`mcode.cmd not found at ${cmdPath}`);
 
@@ -95,14 +103,14 @@ function install() {
   copyDirRecursive(BUNDLED_PACKS, packsPath);
   steps.push(`copied packs -> ${packsPath}`);
 
-  // 3. Modify mcode.cmd
+  // 3. Modify mcode.cmd (Windows cmd launcher)
   let cmdContent = readFileSync(cmdPath, "utf8");
   if (cmdContent.includes("i18n-shim.mjs")) {
     steps.push("mcode.cmd already has i18n-shim.mjs, skipping");
   } else {
-    if (!existsSync(bakPath)) {
-      copyFileSync(cmdPath, bakPath);
-      steps.push(`backed up -> ${bakPath}`);
+    if (!existsSync(cmdBakPath)) {
+      copyFileSync(cmdPath, cmdBakPath);
+      steps.push(`backed up -> ${cmdBakPath}`);
     } else {
       steps.push("mcode.cmd.bak already exists, not overwriting");
     }
@@ -118,13 +126,49 @@ function install() {
     }
   }
 
-  // 4. Create mcode.ps1 (PowerShell launcher template)
+  // 4. Modify mcode (POSIX shell launcher) - same shim injection
+  if (existsSync(shPath)) {
+    let shContent = readFileSync(shPath, "utf8");
+    if (shContent.includes("i18n-shim.mjs")) {
+      steps.push("mcode (shell) already has i18n-shim.mjs, skipping");
+    } else {
+      if (!existsSync(shBakPath)) {
+        copyFileSync(shPath, shBakPath);
+        steps.push(`backed up -> ${shBakPath}`);
+      } else {
+        steps.push("mcode.bak already exists, not overwriting");
+      }
+      // 在 exec ... "$basedir/node_modules/@minimax-ai/code/cli.js" 前面加 --import
+      const modified = shContent.replace(
+        /(exec\s+("[^"]*"|'[^']*'|\$\w+)\s+)(("[^"]*"|'[^']*'|\$\w+)\s+)?("\$basedir\/node_modules\/@minimax-ai\/code\/cli\.js"|'\$\{basedir\}\/node_modules\/@minimax-ai\/code\/cli\.js')/g,
+        (match, p1, p2, p3, p4) => {
+          // p1 = "exec " (含可能有的 "$basedir/node" 或 "node")
+          // 注入 --import "file:///$basedir/i18n-shim.mjs"
+          return `${p1}--import "file:///$basedir/i18n-shim.mjs" ${p4}`;
+        }
+      );
+      // 简化方案:用更精确的 regex
+      const simpleModified = shContent.replace(
+        /("\$basedir\/node"\s+|\bnode\s+)("\$basedir\/node_modules\/@minimax-ai\/code\/cli\.js")/g,
+        '$1--import "file:///$basedir/i18n-shim.mjs" $2'
+      );
+      const finalMod = simpleModified !== shContent ? simpleModified : modified;
+      if (finalMod !== shContent) {
+        writeFileSync(shPath, finalMod, "utf8");
+        steps.push("injected --import into mcode (shell)");
+      } else {
+        steps.push("WARN: mcode (shell) format unexpected, --import not injected");
+      }
+    }
+  }
+
+  // 5. Create mcode.ps1 (PowerShell launcher template)
   if (!existsSync(ps1Path) && existsSync(BUNDLED_PS1)) {
     copyFileSync(BUNDLED_PS1, ps1Path);
     steps.push(`created -> ${ps1Path}`);
   }
 
-  // 5. Ensure user config exists
+  // 6. Ensure user config exists
   if (!existsSync(CONFIG_PATH)) {
     writeJson(CONFIG_PATH, { language: "zh-CN", enabled: true });
     steps.push(`created -> ${CONFIG_PATH}`);
@@ -135,21 +179,24 @@ function install() {
 }
 
 // ─── Tool: uninstall ──────────────────────────────────────────────────
-function uninstall() {
-  const mcodeDir = detectMcodeDir();
+function uninstall(args) {
+  let mcodeDir = args?.mcodeDir;
+  if (!mcodeDir) mcodeDir = detectMcodeDir();
   if (!mcodeDir) return { success: true, message: "mcode not found, nothing to uninstall" };
 
   const steps = [];
   const cmdPath = join(mcodeDir, "mcode.cmd");
+  const shPath = join(mcodeDir, "mcode");
   const ps1Path = join(mcodeDir, "mcode.ps1");
   const shimPath = join(mcodeDir, "i18n-shim.mjs");
   const packsPath = join(mcodeDir, "i18n-packs");
-  const bakPath = join(mcodeDir, "mcode.cmd.bak");
+  const cmdBakPath = join(mcodeDir, "mcode.cmd.bak");
+  const shBakPath = join(mcodeDir, "mcode.bak");
 
   // 1. Restore mcode.cmd from .bak
-  if (existsSync(bakPath)) {
-    copyFileSync(bakPath, cmdPath);
-    unlinkSync(bakPath);
+  if (existsSync(cmdBakPath)) {
+    copyFileSync(cmdBakPath, cmdPath);
+    unlinkSync(cmdBakPath);
     steps.push("restored mcode.cmd from .bak, removed .bak");
   } else if (existsSync(cmdPath)) {
     const content = readFileSync(cmdPath, "utf8");
@@ -160,16 +207,30 @@ function uninstall() {
     }
   }
 
-  // 2. Remove shim
+  // 2. Restore mcode (shell) from .bak
+  if (existsSync(shBakPath)) {
+    copyFileSync(shBakPath, shPath);
+    unlinkSync(shBakPath);
+    steps.push("restored mcode (shell) from .bak, removed .bak");
+  } else if (existsSync(shPath)) {
+    const content = readFileSync(shPath, "utf8");
+    const cleaned = content.replace(/\s*--import\s+["']file:\/\/\/[^"']*["']\s*/g, " ");
+    if (cleaned !== content) {
+      writeFileSync(shPath, cleaned, "utf8");
+      steps.push("removed --import from mcode (shell) (no backup was available)");
+    }
+  }
+
+  // 3. Remove shim
   if (existsSync(shimPath)) { unlinkSync(shimPath); steps.push("removed i18n-shim.mjs"); }
 
-  // 3. Remove packs
+  // 4. Remove packs
   if (existsSync(packsPath)) {
     try { rmSync(packsPath, { recursive: true, force: true }); steps.push("removed i18n-packs/"); }
     catch (e) { steps.push(`WARN: could not remove i18n-packs/: ${e.message}`); }
   }
 
-  // 4. Remove mcode.ps1
+  // 5. Remove mcode.ps1
   if (existsSync(ps1Path)) {
     try { unlinkSync(ps1Path); steps.push("removed mcode.ps1"); }
     catch (e) { steps.push(`WARN: could not remove mcode.ps1: ${e.message}`); }
@@ -284,13 +345,25 @@ try {
 const TOOLS = [
   {
     name: "install",
-    description: "安装 mcode 汉化:复制 shim + 字典包到 mcode 目录,修改 mcode.cmd 注入 --import。已安装则跳过。",
-    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    description: "安装 mcode 汉化:复制 shim + 字典包到 mcode 目录,修改 mcode.cmd 注入 --import。已安装则跳过。可选传 mcodeDir 指定非标准位置(默认探测 PATH + npm global)。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        mcodeDir: { type: "string", description: "mcode 安装目录(含 mcode.cmd 的目录)。非标准位置时手动指定。" },
+      },
+      additionalProperties: false,
+    },
   },
   {
     name: "uninstall",
-    description: "卸载 mcode 汉化:恢复 mcode.cmd 备份,删除 shim + 字典包 + mcode.ps1。",
-    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    description: "卸载 mcode 汉化:恢复 mcode.cmd 备份,删除 shim + 字典包 + mcode.ps1。可选传 mcodeDir。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        mcodeDir: { type: "string", description: "mcode 安装目录。省略时自动探测。" },
+      },
+      additionalProperties: false,
+    },
   },
   {
     name: "switch",
