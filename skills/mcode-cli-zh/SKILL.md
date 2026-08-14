@@ -135,19 +135,22 @@ shim_url="file:///${basedir//\\/\/}/i18n-shim.mjs"
 
 ### 0. 探测 mcode 位置失败?(最常见的坑)
 
-`install` 默认通过两条路径探测 mcode 位置:
-1. `where mcode`(Windows) / `which mcode`(Unix)
-2. `npm root -g` + 检查 `<globalRoot>/@minimax-ai/code/cli.js`
+`install` / `status` 默认通过以下顺序探测 mcode 位置(v0.6.0+):
+1. **上次记住的路径**(`~/.mcode/.i18n-mcode-dir`,装过一次就一劳永逸)
+2. `where mcode`(Windows) / `which mcode`(Unix)
+3. `npm root -g` + 检查 `<globalRoot>/@minimax-ai/code/cli.js`
+4. 常见自定义位置:`~/.minimax-code/`、`~/mcode/`、`~/.mcode/mcode/`
+5. `MCODE_DIR` 环境变量
 
-**如果 mcode 装在非标准位置(比如 `~/.minimax-code/` 这种自定义目录),探测会失败**。`status` 返回 `mcodeInstalled: false`。
+**如果 mcode 装在非标准位置**:`status` 返回 `mcodeInstalled: false`。
 
-**手动指定路径**:
+**手动指定路径**(任意一个工具都接受):
 ```
+mcode_i18n_status(mcodeDir="C:\\Users\\<user>\\.minimax-code")
 mcode_i18n_install(mcodeDir="C:\\Users\\<user>\\.minimax-code")
 ```
-传 `mcodeDir` 后会跳过探测,直接用你给的路径。
 
-**或者**:把 mcode 所在目录加到系统 `PATH`,重启 Mavis 让 MCP server 重新探测。
+**装过一次后会记住路径**——下一次再调 `status` / `install`,不用再传 `mcodeDir`,Plugin 自动用上次的路径。
 
 ### 1. 翻译开关(独立于语言)
 

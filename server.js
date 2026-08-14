@@ -21,7 +21,29 @@ const HOME = homedir();
 const MCODE_HOME = join(HOME, ".mcode");
 const CONFIG_PATH = join(MCODE_HOME, "config.json");
 const LOG_PATH = join(MCODE_HOME, "logs", "mcode-cli-zh.log");
-const PLUGIN_VERSION = "0.5.0";
+const MCODE_DIR_CACHE = join(MCODE_HOME, ".i18n-mcode-dir");  // 记住 mcode 位置
+const PLUGIN_VERSION = "0.6.0";
+
+// 读取/保存 mcode 位置(下次自动用)
+function getCachedMcodeDir() {
+  try {
+    if (existsSync(MCODE_DIR_CACHE)) {
+      const dir = readFileSync(MCODE_DIR_CACHE, "utf8").trim();
+      if (dir && existsSync(join(dir, "mcode.cmd"))) return dir;
+    }
+  } catch {}
+  return null;
+}
+
+function saveCachedMcodeDir(dir) {
+  try {
+    mkdirSync(MCODE_HOME, { recursive: true });
+    writeFileSync(MCODE_DIR_CACHE, dir, "utf8");
+    log("cached mcodeDir:", dir);
+  } catch (e) {
+    log("failed to cache mcodeDir:", e.message);
+  }
+}
 
 // ─── Logging ───────────────────────────────────────────────────────────
 function log(...args) {
@@ -34,6 +56,10 @@ function log(...args) {
 
 // ─── Detect mcode install ─────────────────────────────────────────────
 function detectMcodeDir() {
+  // 0) 上次记住的路径(优先,免探测)
+  const cached = getCachedMcodeDir();
+  if (cached) return cached;
+
   // 1) `where mcode` (Windows) or `which mcode` (Unix)
   try {
     const cmd = platform === "win32" ? "where.exe mcode" : "which mcode";
@@ -47,6 +73,41 @@ function detectMcodeDir() {
     const globalRoot = out.trim();
     const cliJs = join(globalRoot, "@minimax-ai", "code", "cli.js");
     if (existsSync(cliJs)) return dirname(globalRoot);
+  } catch { /* ignore */ }
+  // 3) 常见自定义位置
+  const customPaths = [
+    join(HOME, ".minimax-code"),
+    join(HOME, "mcode"),
+    join(HOME, ".mcode", "mcode"),
+  ];
+  for (const p of customPaths) {
+    if (existsSync(join(p, "mcode.cmd"))) return p;
+  }
+  // 4) MCODE_DIR 环境变量
+  if (process.env.MCODE_DIR && existsSync(join(process.env.MCODE_DIR, "mcode.cmd"))) {
+    return process.env.MCODE_DIR;
+  }
+  return null;
+}
+
+// 帮助信息:探测失败时给用户提示
+function mcodeNotFoundHint() {
+  return "mcode installation not found. Try one of:\n" +
+    "  1) Pass mcodeDir explicitly: mcode_i18n_install(mcodeDir='<path>')\n" +
+    "  2) Add mcode to PATH and restart Mavis\n" +
+    "  3) Verify mcode is installed: where mcode (Windows) or which mcode (Unix)";
+}
+  } catch { /* ignore */ }
+  return null;
+}
+
+// 帮助信息:探测失败时给用户提示
+function mcodeNotFoundHint() {
+  return "mcode installation not found. Try one of:\n" +
+    "  1) Pass mcodeDir explicitly: mcode_i18n_install(mcodeDir='<path>')\n" +
+    "  2) Add mcode to PATH and restart Mavis\n" +
+    "  3) Verify mcode is installed: where mcode (Windows) or which mcode (Unix)";
+}
   } catch { /* ignore */ }
   return null;
 }
@@ -185,6 +246,8 @@ function install(args) {
   }
 
   log("install:", steps.join(" | "));
+  // 记住 mcodeDir,下次自动用
+  saveCachedMcodeDir(mcodeDir);
   return { success: true, mcodeDir, steps };
 }
 
@@ -293,8 +356,10 @@ function setEnabled(args) {
 }
 
 // ─── Tool: status ─────────────────────────────────────────────────────
-function getStatus() {
-  const mcodeDir = detectMcodeDir();
+function getStatus(args) {
+  // 也接受 mcodeDir 参数(给非标准位置用,跟 install 一样)
+  let mcodeDir = args?.mcodeDir;
+  if (!mcodeDir) mcodeDir = detectMcodeDir();
   const s = {
     mcodeInstalled: !!mcodeDir,
     mcodeDir,
@@ -401,8 +466,14 @@ const TOOLS = [
   },
   {
     name: "status",
-    description: "查看 mcode 汉化安装状态:shim/packs 是否就位,cmd 是否被改,用户配置等。",
-    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    description: "查看 mcode 汉化安装状态:shim/packs 是否就位,cmd 是否被改,用户配置等。可选传 mcodeDir 指定非标准位置(跟 install 一样)。",
+    inputSchema: {
+      type: "object",
+      properties: {
+        mcodeDir: { type: "string", description: "mcode 安装目录。省略时自动探测(或用上次记住的路径)。" },
+      },
+      additionalProperties: false,
+    },
   },
 ];
 
