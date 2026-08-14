@@ -246,7 +246,7 @@ function switchLang(args) {
   if (!locale || !["zh-CN", "zh-TW", "en"].includes(locale)) {
     throw new Error("locale must be one of: zh-CN, zh-TW, en");
   }
-  if (!detectMcodeDir()) throw new Error("mcode installation not found");
+  // switch 只改 ~/.mcode/config.json,不需要 mcode 安装检测
 
   const config = readJson(CONFIG_PATH, {});
   config.language = locale;
@@ -267,7 +267,7 @@ function setEnabled(args) {
   if (typeof on !== "boolean") {
     throw new Error("on must be true or false");
   }
-  if (!detectMcodeDir()) throw new Error("mcode installation not found");
+  // translate 只改 ~/.mcode/config.json,不需要 mcode 安装检测
 
   const config = readJson(CONFIG_PATH, {});
   config.enabled = on;
