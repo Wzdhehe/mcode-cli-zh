@@ -97,20 +97,6 @@ function mcodeNotFoundHint() {
     "  2) Add mcode to PATH and restart Mavis\n" +
     "  3) Verify mcode is installed: where mcode (Windows) or which mcode (Unix)";
 }
-  } catch { /* ignore */ }
-  return null;
-}
-
-// 帮助信息:探测失败时给用户提示
-function mcodeNotFoundHint() {
-  return "mcode installation not found. Try one of:\n" +
-    "  1) Pass mcodeDir explicitly: mcode_i18n_install(mcodeDir='<path>')\n" +
-    "  2) Add mcode to PATH and restart Mavis\n" +
-    "  3) Verify mcode is installed: where mcode (Windows) or which mcode (Unix)";
-}
-  } catch { /* ignore */ }
-  return null;
-}
 
 // ─── Helpers ───────────────────────────────────────────────────────────
 function copyDirRecursive(src, dst) {
@@ -131,6 +117,86 @@ function readJson(path, fallback) {
 function writeJson(path, obj) {
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, JSON.stringify(obj, null, 2) + "\n", "utf8");
+}
+
+// ─── 鲁棒 shim 注入:不依赖具体启动器模板格式 ────────────────────────────
+// 找含 cli.js 的命令行引用,提取路径前缀,在 cli.js 前面插 --import + shim 参数
+// 覆盖:
+//   - mcode.cmd (Windows): "%dp0%\..." 或 "%~dp0\..." 风格
+//   - mcode (POSIX shell): "$basedir/..." 风格
+//   - mcode.ps1 (PowerShell): $basedir/... 风格(已含 $i18nShim 变量)
+// 返回 { content, injected, reason }
+function injectShimIntoLauncher(content, mcodeDir) {
+  // 1. Windows 风格: "%dp0%\node_modules\...\cli.js" 或 "%~dp0\...\cli.js"
+  const winRe = /"(%[~]?dp0%?[^"]*?cli\.js)"/;
+  const winMatch = content.match(winRe);
+  if (winMatch) {
+    const cliPath = winMatch[1];
+    // 提取前缀变量: %dp0% 或 %~dp0
+    const dpVar = cliPath.match(/^%[~]?dp0%?/)[0];
+    // 构造 shim file URL: file:///%~dp0\i18n-shim.mjs
+    // 注意:file:/// + dpVar + \i18n-shim.mjs,但 dpVar 含 %,需要裸路径段
+    // 简化:把 dpVar 的 % 去掉,得到 ~dp0 或 dp0,然后拼 file:///~dp0\i18n-shim.mjs
+    // 实际上 mcode.cmd 用 "%~dp0" 时,file:// 直接拼 %~dp0 是不行的(URL 不合法)
+    // 但 cmd 的 % 是变量引用,真实路径是变量值,需要在 file:// 后面跟的是字面路径
+    // 标准做法:file:///%~dp0\i18n-shim.mjs → cmd 展开后 file:///C:\Users\...\i18n-shim.mjs
+    // 所以 file:// 后面跟 dpVar(不变)即可
+    const shimArg = `"--import" "file:///${dpVar}\\i18n-shim.mjs"`;
+    const newContent = content.replace(
+      `"${cliPath}"`,
+      `${shimArg} "${cliPath}"`
+    );
+    return { content: newContent, injected: true, reason: "windows style" };
+  }
+
+  // 2. PS1 风格: 内容已含 $i18nShim 变量,只需在 cli.js 引用前插 --import "$i18nShim"
+  //   模板行: & "$basedir/node$exe"  "$cliEntry" $args
+  //   改成:  & "$basedir/node$exe"  --import "$i18nShim" "$cliEntry" $args
+  if (content.includes("$i18nShim") || content.includes("i18nShimPath")) {
+    const ps1Re = /"(\$\{?basedir\}?\/[^"'\s]*cli\.js)"/g;
+    if (ps1Re.test(content)) {
+      const newContent = content.replace(
+        ps1Re,
+        '--import "$i18nShim" "$1"'
+      );
+      return { content: newContent, injected: true, reason: "ps1 style (--import shim 注入)" };
+    }
+  }
+
+  // 3. POSIX shell 风格: "$basedir/.../cli.js"
+  //   模板: exec "$basedir/node"  "$basedir/node_modules/@minimax-ai/code/cli.js" "$@"
+  //   改成: exec "$basedir/node" --import "file:///$basedir/../i18n-shim.mjs" "$basedir/.../cli.js" "$@"
+  const shRe = /"(\$\{?basedir\}?\/[^"'\s]*cli\.js)"/;
+  const shMatch = content.match(shRe);
+  if (shMatch) {
+    if (content.includes("i18n_shim_url")) {
+      return { content, injected: false, reason: "posix shell already has shim wrapper" };
+    }
+    // 插入 wrapper 段:cygpath 转换 + shim URL 变量
+    // 找第一个 "if [ -x \"$basedir/node\" ]; then" 行,前面插 wrapper
+    const wrapper = `# i18n-shim injection (mcode-cli-zh Plugin)\n` +
+      `case \`uname\` in *CYGWIN*|*MINGW*|*MSYS*) if command -v cygpath > /dev/null 2>&1; then basedir=\`cygpath -w "$basedir"\`; fi ;; esac\n` +
+      `i18n_shim_url="file:///\${basedir//\\\\/\\/}/i18n-shim.mjs"\n`;
+    // 找 exec 行前插
+    const newContent = content.replace(
+      /(\nif \[ -x "\$basedir\/node" \]; then)/,
+      `\n${wrapper}$1`
+    );
+    if (newContent === content) {
+      // 备用:在第一个 exec 之前插
+      const altNew = content.replace(
+        /(\nexec )/,
+        `\n${wrapper}$1`
+      );
+      if (altNew !== content) {
+        return { content: altNew, injected: true, reason: "posix shell style (fallback)" };
+      }
+      return { content, injected: false, reason: "posix shell: no anchor for wrapper" };
+    }
+    return { content: newContent, injected: true, reason: "posix shell style" };
+  }
+
+  return { content, injected: false, reason: "no cli.js path pattern matched" };
 }
 
 // ─── Tool: install ────────────────────────────────────────────────────
@@ -165,6 +231,7 @@ function install(args) {
   steps.push(`copied packs -> ${packsPath}`);
 
   // 3. Modify mcode.cmd (Windows cmd launcher)
+  //    鲁棒注入:不依赖具体模板格式,适配旧模板(%dp0%)和新模板(%~dp0 + 嵌入 node)
   let cmdContent = readFileSync(cmdPath, "utf8");
   if (cmdContent.includes("i18n-shim.mjs")) {
     steps.push("mcode.cmd already has i18n-shim.mjs, skipping");
@@ -175,15 +242,12 @@ function install(args) {
     } else {
       steps.push("mcode.cmd.bak already exists, not overwriting");
     }
-    const modified = cmdContent.replace(
-      /"(%dp0%\\node_modules\\@minimax-ai\\code\\cli\.js)"/,
-      '--import "file:///%dp0%\\i18n-shim.mjs" "$1"'
-    );
-    if (modified !== cmdContent) {
-      writeFileSync(cmdPath, modified, "utf8");
-      steps.push("injected --import into mcode.cmd");
+    const cmdResult = injectShimIntoLauncher(cmdContent, mcodeDir);
+    if (cmdResult.injected) {
+      writeFileSync(cmdPath, cmdResult.content, "utf8");
+      steps.push(`injected --import into mcode.cmd (${cmdResult.reason})`);
     } else {
-      steps.push("WARN: mcode.cmd format unexpected, --import not injected");
+      steps.push(`WARN: mcode.cmd format unexpected, --import not injected (${cmdResult.reason})`);
     }
   }
 
@@ -199,32 +263,30 @@ function install(args) {
       } else {
         steps.push("mcode.bak already exists, not overwriting");
       }
-      // 注入一个 shim wrapper,正确处理 file:// URL(避免 4 斜杠问题)
-      // 不直接改 exec 行,而是在 shim 加载前把 $basedir 转 Windows 路径
-      const shimInject = `i18n_shim_url="file:///\${basedir//\\\\/\\/}/i18n-shim.mjs"\n`;
-      const wrapper = `# i18n-shim injection (mcode-cli-zh Plugin)\n` +
-        (platform === "win32"
-          ? `case \`uname\` in *CYGWIN*|*MINGW*|*MSYS*) if command -v cygpath > /dev/null 2>&1; then basedir=\`cygpath -w "$basedir"\`; fi ;; esac\n`
-          : ``) +
-        shimInject;
-      // 在 exec 行前面插入 wrapper
-      const modified = shContent.replace(
-        /(\nif \[ -x "\$basedir\/node" \]; then)/,
-        `\n${wrapper}$1`
-      );
-      if (modified !== shContent) {
-        writeFileSync(shPath, modified, "utf8");
-        steps.push("injected i18n-shim wrapper into mcode (shell)");
+      const shResult = injectShimIntoLauncher(shContent, mcodeDir);
+      if (shResult.injected) {
+        writeFileSync(shPath, shResult.content, "utf8");
+        steps.push(`injected shim into mcode (shell) (${shResult.reason})`);
       } else {
-        steps.push("WARN: mcode (shell) format unexpected, wrapper not injected");
+        steps.push(`WARN: mcode (shell) format unexpected, shim not injected (${shResult.reason})`);
       }
     }
   }
 
-  // 5. Create mcode.ps1 (PowerShell launcher template)
+  // 5. Create/restore mcode.ps1 (PowerShell launcher template)
   // 注意:如果存在 mcode.ps1.disabled(用户主动禁用的),不要自动还原
+  // 但 mcode update 会把 mcode.ps1 简化成 205 字节(无 shim 注入),需要检测并修复
   const ps1DisabledPath = join(mcodeDir, "mcode.ps1.disabled");
-  if (!existsSync(ps1Path) && existsSync(ps1DisabledPath)) {
+  if (existsSync(ps1Path) && existsSync(BUNDLED_PS1)) {
+    const ps1Content = readFileSync(ps1Path, "utf8");
+    if (!ps1Content.includes("i18n-shim") && !ps1Content.includes("$i18nShim")) {
+      // mcode.ps1 存在但不含 shim 注入(可能是 mcode update 简化了) → 覆盖回 Plugin 模板
+      copyFileSync(BUNDLED_PS1, ps1Path);
+      steps.push(`mcode.ps1 缺少 shim 注入,已覆盖回 Plugin 模板`);
+    } else {
+      steps.push(`mcode.ps1 OK,跳过`);
+    }
+  } else if (!existsSync(ps1Path) && existsSync(ps1DisabledPath)) {
     steps.push(`mcode.ps1.disabled exists, not auto-restoring (user disabled intentionally)`);
   } else if (!existsSync(ps1Path) && existsSync(BUNDLED_PS1)) {
     copyFileSync(BUNDLED_PS1, ps1Path);
