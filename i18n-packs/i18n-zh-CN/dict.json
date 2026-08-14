@@ -93,7 +93,12 @@
     "next message enters Plan": "下一条消息进入 Plan",
     "@ file": "@ 添加文件",
     "/ autocomplete": "/ 命令列表",
-    "Esc to close": "按 Esc 关闭"
+    "Esc to close": "按 Esc 关闭",
+    "/goal <objective>: set or update the current Session Goal.": "/goal <objective>:设置或更新当前会话目标。",
+    "/goal clear: remove the current Goal.": "/goal clear:移除当前目标。",
+    "/goal edit: load the current objective into the composer.": "/goal edit:将当前目标加载到编辑器。",
+    "/goal pause: pause auto-continuation.": "/goal pause:暂停自动继续。",
+    "/goal resume: resume auto-continuation.": "/goal resume:恢复自动继续。"
   },
   "transcript_kinds": {
     "You": "你",
